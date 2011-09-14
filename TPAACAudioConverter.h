@@ -32,11 +32,13 @@ enum {
     BOOL interrupted;
     NSCondition *condition;
     UInt32 priorMixOverrideValue;
+  
+    void (^handler)(NSError *error);
 }
 
 + (BOOL)AACConverterAvailable;
 
-- (id)initWithDelegate:(id<TPAACAudioConverterDelegate>)delegate source:(NSString*)sourcePath destination:(NSString*)destinationPath;
+- (id)initWithSource:(NSString*)sourcePath destination:(NSString*)destinationPath completionHandler:(void(^)(NSError *error))handler;
 - (id)initWithDelegate:(id<TPAACAudioConverterDelegate>)delegate dataSource:(id<TPAACAudioConverterDataSource>)dataSource audioFormat:(AudioStreamBasicDescription)audioFormat destination:(NSString*)destinationPath;
 - (void)start;
 - (void)cancel;

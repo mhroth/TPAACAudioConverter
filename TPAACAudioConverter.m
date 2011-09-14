@@ -77,12 +77,13 @@ static BOOL _available_set = NO;
 #endif
 }
 
-- (id)initWithDelegate:(id<TPAACAudioConverterDelegate>)_delegate source:(NSString*)sourcePath destination:(NSString*)destinationPath {
+- (id)initWithSource:(NSString*)sourcePath destination:(NSString*)destinationPath completionHandler:(void(^)(NSError *error))aHandler {
     if ( !(self = [super init]) ) return nil;
     
-    delegate = _delegate;
+    delegate = nil;
     self.source = sourcePath;
     self.destination = destinationPath;
+    handler = [aHandler copy];
     condition = [[NSCondition alloc] init];
     
     return self;
@@ -107,6 +108,8 @@ static BOOL _available_set = NO;
     self.source = nil;
     self.destination = nil;
     self.dataSource = nil;
+    [handler release];
+    handler = nil;
     [super dealloc];
 }
 
@@ -158,7 +161,13 @@ static BOOL _available_set = NO;
 }
 
 - (void)reportCompletion {
-    [delegate AACAudioConverterDidFinishConversion:self];
+    if (delegate != nil) {
+      [delegate AACAudioConverterDidFinishConversion:self];
+    } else if (handler != nil) {
+      handler(nil);
+      [handler release];
+      handler = nil;
+    }
     if ( priorMixOverrideValue != NO ) {
         UInt32 allowMixing = priorMixOverrideValue;
         checkResult(AudioSessionSetProperty(kAudioSessionProperty_OverrideCategoryMixWithOthers, sizeof (allowMixing), &allowMixing),
@@ -175,7 +184,13 @@ static BOOL _available_set = NO;
                     "AudioSessionSetProperty(kAudioSessionProperty_OverrideCategoryMixWithOthers)");
     }
     [self autorelease];
-    [delegate AACAudioConverter:self didFailWithError:error];
+    if (delegate != nil) {
+      [delegate AACAudioConverter:self didFailWithError:error];
+    } else if (handler != nil) {
+      handler(error);
+      [handler release];
+      handler = nil;
+    }
 }
 
 - (void)processingThread {
